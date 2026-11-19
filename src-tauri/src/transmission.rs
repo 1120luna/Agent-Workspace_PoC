@@ -234,6 +234,13 @@ impl SidecarBridge {
                     "O-103: [T-203] Sidecar 결과 수신 채널이 닫혔습니다.",
                 )
             }
+            Ok(Ok(_)) => {
+                let _ = self.db.update_request_status(&request_id, "FAILED");
+                CoreResponse::technical_error(
+                    Some(request_id.clone()),
+                    "O-103: 예상치 못한 Sidecar 이벤트가 수신되었습니다.",
+                )
+            }
             Err(_) => {
                 // [T-203] 최종 결과 타임아웃
                 let _ = self.db.update_request_status(&request_id, "TIMEOUT_EXEC");

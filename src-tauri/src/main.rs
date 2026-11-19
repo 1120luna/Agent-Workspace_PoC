@@ -7,7 +7,6 @@ mod transmission;
 mod types;
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
 
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -113,26 +112,20 @@ fn spawn_sidecar_process(
     bridge: SidecarBridge,
     app_handle: AppHandle,
 ) {
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         let mut rx = stdin_rx;
 
-        // Sidecar 실행 경로 탐색 (개발 환경 ts-node/node 또는 빌드된 번들)
-        let sidecar_dir = app_dir.join("..").join("sidecar");
-        let sidecar_script = sidecar_dir.join("src").join("index.ts");
+        // Sidecar 실행 경로 (절대 경로로 직접 지정)
+        let sidecar_dir = PathBuf::from(r"C:\Users\LG\Desktop\git blog\1120luna.github.io\Agent-Workspace_PoC\sidecar");
         let sidecar_dist = sidecar_dir.join("dist").join("index.js");
 
         let mut cmd = if sidecar_dist.exists() {
             let mut c = Command::new("node");
             c.arg(&sidecar_dist);
             c
-        } else if sidecar_script.exists() {
-            let mut c = Command::new("npx");
-            c.arg("ts-node").arg(&sidecar_script);
-            c
         } else {
-            // Tauri bundle 기본 externalBin Sidecar 바이너리 경로
-            let mut c = Command::new("sidecar");
-            c
+            eprintln!("[Tauri Rust Core] 빌드된 sidecar dist가 없습니다: {:?}", sidecar_dist);
+            Command::new("node")
         };
 
         cmd.stdin(std::process::Stdio::piped())
@@ -155,7 +148,7 @@ fn spawn_sidecar_process(
         let stderr = child.stderr.take().expect("Failed to open sidecar stderr");
 
         // 1. Sidecar stdin 쓰기 태스크
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             while let Some(line) = rx.recv().await {
                 if let Err(e) = stdin.write_all(line.as_bytes()).await {
                     eprintln!("[Sidecar Stdin Task] 라인 쓰기 오류: {}", e);
@@ -168,7 +161,7 @@ fn spawn_sidecar_process(
         // 2. Sidecar stdout 읽기 (NDJSON 스트림 파서) 태스크
         let bridge_clone = bridge.clone();
         let app_handle_clone = app_handle.clone();
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             let mut reader = BufReader::new(stdout).lines();
             while let Ok(Some(line)) = reader.next_line().await {
                 let trimmed = line.trim();
@@ -186,7 +179,7 @@ fn spawn_sidecar_process(
         });
 
         // 3. Sidecar stderr 로깅 태스크
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             let mut err_reader = BufReader::new(stderr).lines();
             while let Ok(Some(line)) = err_reader.next_line().await {
                 eprintln!("[Sidecar STDERR] {}", line);

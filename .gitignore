@@ -1,0 +1,26 @@
+# Rust 빌드 결과물 (매우 용량이 크므로 반드시 제외)
+src-tauri/target/
+
+# Node.js 의존성
+sidecar/node_modules/
+
+# TypeScript 빌드 결과물 (소스로 재생성 가능)
+sidecar/dist/
+
+# SQLite DB 파일 (로컬 데이터)
+*.db
+*.db-shm
+*.db-wal
+
+# 더미 아이콘/바이너리 (로컬 PoC 실행용으로 생성된 임시 파일)
+src-tauri/binaries/
+
+# 프론트엔드 빌드 결과물
+dist/
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# Tauri 자동 생성 파일
+src-tauri/gen/
